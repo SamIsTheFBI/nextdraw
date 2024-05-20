@@ -343,159 +343,163 @@ const Canvas = () => {
   } 
 
   const handleMouseDown = (event) => {
-    const canvas = document.getElementById("canvas");
-    if (event.button == 1) {
-      dispatch(changeToolWheel(true));
-      return;
-    }
-
-    modifyClient(event);
-    if(keys.has(" ")){
-      canvas.style.cursor = "grabbing"
-      setIsPanning("panning");
-      setStartPanning({ x: event.clientX, y: event.clientY })
-      return;
-    }
-    if (action === 'writing') {
-      return;
-    }
-
-    if (tool === "eraser") {
-      const ele = getElementBelow(event, selectedElement, scale);
-
-      if (ele != null) {
-        //Remove element below
-        eraseElement(ele)
-        // to remove the bounds if they are on a element somewhere else
-        if (selectedElement != null && selectedElement.id != ele.id) {
-          dispatch(setSelectedElement(null));
-        }
-      } else {
-        // to remove the bounds if they are on a element somewhere else
-        if (selectedElement !== null) {
-          dispatch(setSelectedElement(null));
-        }
+    if(event.button === 0) { // Checks if left mouse button is clicked
+      console.log(selectedElement)
+      setCtxMenu({ visible: false, x: 0, y: 0 })
+      const canvas = document.getElementById("canvas");
+      if (event.button == 1) {
+        dispatch(changeToolWheel(true));
+        return;
       }
 
-      return;
-    }
+      modifyClient(event);
+      if(keys.has(" ")){
+        canvas.style.cursor = "grabbing"
+        setIsPanning("panning");
+        setStartPanning({ x: event.clientX, y: event.clientY })
+        return;
+      }
+      if (action === 'writing') {
+        return;
+      }
+
+      if (tool === "eraser") {
+        const ele = getElementBelow(event, selectedElement, scale);
+
+        if (ele != null) {
+          //Remove element below
+          eraseElement(ele)
+          // to remove the bounds if they are on a element somewhere else
+          if (selectedElement != null && selectedElement.id != ele.id) {
+            dispatch(setSelectedElement(null));
+          }
+        } else {
+          // to remove the bounds if they are on a element somewhere else
+          if (selectedElement !== null) {
+            dispatch(setSelectedElement(null));
+          }
+        }
+
+        return;
+      }
 
 
 
-    if (tool === "selection") {
+      if (tool === "selection") {
 
 
-      const ele = getElementBelow(event, selectedElement, scale);
+        const ele = getElementBelow(event, selectedElement, scale);
 
 
-      if (ele != null) {
+        if (ele != null) {
 
 
 
-        const msNow = (new Date()).getTime()
-        if ((msNow - lastClick) < CLICK_INTERVAL) {
+          const msNow = (new Date()).getTime()
+          if ((msNow - lastClick) < CLICK_INTERVAL) {
 
-          if (selectedElement) {
+            if (selectedElement) {
 
-            if (selectedElement.type === 'text' &&
-              event.clientX - selectedElement.offSetX === selectedElement.x1 &&
-              event.clientY - selectedElement.offSetY === selectedElement.y1) {
+              if (selectedElement.type === 'text' &&
+                event.clientX - selectedElement.offSetX === selectedElement.x1 &&
+                event.clientY - selectedElement.offSetY === selectedElement.y1) {
 
-              dispatch(setAction("writing"));
-              dispatch(changeTool("text"));
-              return;
+                dispatch(setAction("writing"));
+                dispatch(changeTool("text"));
+                return;
+              }
             }
           }
-        }
 
-        lastClick = msNow;
-
-
-        // to remove the bounds if they are on a element somewhere else
-        if (selectedElement != null && selectedElement.id != ele.id) {
+          lastClick = msNow;
 
 
-          dispatch(setSelectedElement(null));
+          // to remove the bounds if they are on a element somewhere else
+          if (selectedElement != null && selectedElement.id != ele.id) {
 
-        }
 
+            dispatch(setSelectedElement(null));
 
-        const { id, x1, y1, x2, y2, type } = ele;
-        // logic for the creation of extra state when we just click on the element
-        if (dupState === true) {
-          if (changed === true) {
-            dispatch(setElement([elements, false, id.split("#")[0]]));
-            dispatch(setChanged(false));
-            // setChanged(false);
-          } else {
-            dispatch(setElement([elements, true, id.split("#")[0]]));
           }
+
+
+          const { id, x1, y1, x2, y2, type } = ele;
+          // logic for the creation of extra state when we just click on the element
+          if (dupState === true) {
+            if (changed === true) {
+              dispatch(setElement([elements, false, id.split("#")[0]]));
+              dispatch(setChanged(false));
+              // setChanged(false);
+            } else {
+              dispatch(setElement([elements, true, id.split("#")[0]]));
+            }
+          } else {
+            dispatch(setElement([elements, false, id.split("#")[0]]));
+            dispatch(setDupState(true));
+            dispatch(setChanged(false));
+
+          }
+
+
+
+          let offSetX;
+          let offSetY;
+
+          if (type != 'pencil') {
+            offSetX = event.clientX - ele.x1;
+            offSetY = event.clientY - ele.y1;
+            dispatch(setOldElement(ele));
+            dispatch(setSelectedElement({ ...ele, offSetX, offSetY }));
+            updateElement(id, x1, y1, x2, y2, type, { text: ele.text });
+          } else {
+
+            offSetX = ele.points.map(point => event.clientX - point.x);
+            offSetY = ele.points.map(point => event.clientY - point.y);
+            const rectCoordinatesOffsetX = event.clientX - ele.x1
+            const rectCoordinatesOffsetY = event.clientY - ele.y1
+
+            dispatch(setOldElement(ele));
+            dispatch(setSelectedElement({ ...ele, offSetX, offSetY, rectCoordinatesOffsetX, rectCoordinatesOffsetY }));
+          }
+
+
         } else {
-          dispatch(setElement([elements, false, id.split("#")[0]]));
-          dispatch(setDupState(true));
-          dispatch(setChanged(false));
+
+          // to remove the bounds if they are on a element somewhere else
+          if (selectedElement != null) {
+
+
+            dispatch(setSelectedElement(null));
+
+          }
 
         }
 
+        // default behaviour 
+        if (hover === 'present') {
+
+          dispatch(setAction("moving"));
+
+        } else if (hover === 'resize') {
+
+          dispatch(setAction("resizing"));
+        }
+
+      }
 
 
-        let offSetX;
-        let offSetY;
+      else {
 
-        if (type != 'pencil') {
-          offSetX = event.clientX - ele.x1;
-          offSetY = event.clientY - ele.y1;
-          dispatch(setOldElement(ele));
-          dispatch(setSelectedElement({ ...ele, offSetX, offSetY }));
-          updateElement(id, x1, y1, x2, y2, type, { text: ele.text });
+
+        // drawing and writing area
+        if (tool === 'text') {
+          dispatch(setAction("writing"));
         } else {
-
-          offSetX = ele.points.map(point => event.clientX - point.x);
-          offSetY = ele.points.map(point => event.clientY - point.y);
-          const rectCoordinatesOffsetX = event.clientX - ele.x1
-          const rectCoordinatesOffsetY = event.clientY - ele.y1
-
-          dispatch(setOldElement(ele));
-          dispatch(setSelectedElement({ ...ele, offSetX, offSetY, rectCoordinatesOffsetX, rectCoordinatesOffsetY }));
+          dispatch(setAction("drawing"));
         }
 
-
-      } else {
-
-        // to remove the bounds if they are on a element somewhere else
-        if (selectedElement != null) {
-
-
-          dispatch(setSelectedElement(null));
-
-        }
-
+        addElementToInventory(elements,  event.clientX, event.clientY, event.clientX, event.clientY);
       }
-
-      // default behaviour 
-      if (hover === 'present') {
-
-        dispatch(setAction("moving"));
-
-      } else if (hover === 'resize') {
-
-        dispatch(setAction("resizing"));
-      }
-
-    }
-
-
-    else {
-
-
-      // drawing and writing area
-      if (tool === 'text') {
-        dispatch(setAction("writing"));
-      } else {
-        dispatch(setAction("drawing"));
-      }
-
-      addElementToInventory(elements,  event.clientX, event.clientY, event.clientX, event.clientY);
     }
 
   };
@@ -729,6 +733,38 @@ const Canvas = () => {
   // testing purpose
 
 
+  const canvasRef = useRef(null)
+  const [ctxMenu, setCtxMenu] = useState({ visible: false, x: 0, y: 0 })
+
+  const isMouseInsideShape = () => {
+    const shapes = [ "rectangle", "ellipse", "diamond" ] 
+    
+    return shapes.includes(selectedElement?.type)
+  }
+
+  const handleRightClick = (e) => {
+    e.preventDefault()
+
+    if (tool !== 'selection') return
+    if (!selectedElement?.type) return
+
+    const rect = canvasRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const shape = { 
+      type: selectedElement?.type, 
+      x1: selectedElement?.x1,  
+      x2: selectedElement?.x2,  
+      y1: selectedElement?.y1,  
+      y2: selectedElement?.y2,  
+    }
+
+    if (isMouseInsideShape()) {
+      setCtxMenu({ visible: true, x: e.clientX, y: e.clientY })
+    } else {
+      setCtxMenu({ visible: false, x: 0, y: 0 })
+    }
+  }
 
   return (
     <div>
@@ -849,10 +885,27 @@ const Canvas = () => {
         width={width}
         style={{ height: height, width: width, zIndex: 1 }}
         onMouseDown={handleMouseDown}
-        
+        onContextMenu={handleRightClick}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-      ></canvas>
+        ref={canvasRef}
+      />
+      {ctxMenu.visible && (
+        <div
+          style={{
+            position: 'absolute',
+            top: ctxMenu.y,
+            left: ctxMenu.x,
+            zIndex: 1000,
+          }}
+        >
+          <ul className="min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2">
+            <li className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+              Insert text inside this {selectedElement.type}
+            </li>
+          </ul>
+        </div>
+      )}
 
  
     </div>
